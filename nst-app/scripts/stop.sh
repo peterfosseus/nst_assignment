@@ -1,0 +1,2 @@
+
+systemctl stop myapp.service

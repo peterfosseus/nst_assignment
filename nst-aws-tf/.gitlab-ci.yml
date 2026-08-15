@@ -1,0 +1,215 @@
+stages:
+  - init
+  - validate
+  - plan
+  - apply
+  - destroy
+
+variables:
+  DEV_TF_ROOT: ${CI_PROJECT_DIR}/terraform/environments/dev
+#  PRD_TF_ROOT: ${CI_PROJECT_DIR}/terraform/environments/prd
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - ${DEV_TF_ROOT}/.terraform
+    - ${DEV_TF_ROOT}/.terraform.lock.hcl
+#    - ${PRD_TF_ROOT}/.terraform
+#    - ${PRD_TF_ROOT}/.terraform.lock.hcl
+
+default:
+  image:
+    name: hashicorp/terraform:1.15.8
+    entrypoint: [""]
+
+# -------------------------
+# AWS OIDC authentication
+# -------------------------
+
+.dev_aws_auth:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+
+  before_script:
+    - apk add --no-cache aws-cli
+    - set -x
+    - mkdir -p ~/.aws
+    - echo "${GITLAB_OIDC_TOKEN}" > /tmp/web_identity_token
+    - echo -e "[default]\nrole_arn=${DEV_AWS_ROLE_ARN}\nweb_identity_token_file=/tmp/web_identity_token" > ~/.aws/config
+    - cat ~/.aws/config
+    - aws sts get-caller-identity
+
+#.prd_aws_auth:
+#  id_tokens:
+#    GITLAB_OIDC_TOKEN:
+#      aud: https://gitlab.com
+#
+#  before_script:
+#    - apk add --no-cache aws-cli
+#    - set -x
+#    - mkdir -p ~/.aws
+#    - echo "${GITLAB_OIDC_TOKEN}" > /tmp/web_identity_token
+#    - echo -e "[default]\nrole_arn=${PRD_AWS_ROLE_ARN}\nweb_identity_token_file=/tmp/web_identity_token" > ~/.aws/config
+#    - cat ~/.aws/config
+#    - aws sts get-caller-identity
+
+# -------------------------
+# Dev Initialise terraform
+# -------------------------
+
+dev_init:
+  extends: .dev_aws_auth
+  stage: init
+  script:
+    - cd $DEV_TF_ROOT
+    - apk add --no-cache gettext moreutils
+    - envsubst < code-deploy-secrets-manager.tf | sponge code-deploy-secrets-manager.tf
+    - terraform init
+  artifacts:
+    paths:
+      - ${DEV_TF_ROOT}/code-deploy-secrets-manager.tf
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ${DEV_TF_ROOT}/.terraform
+      - ${DEV_TF_ROOT}/.terraform.lock.hcl
+
+
+# -------------------------
+# Dev Validate
+# -------------------------
+
+dev_validate:
+  extends: .dev_aws_auth
+  stage: validate
+  dependencies:
+    - dev_init
+  script:
+    - cd $DEV_TF_ROOT
+    - terraform fmt -check -recursive
+    - terraform validate
+
+# -------------------------
+# DEV PLAN
+# -------------------------
+
+dev_plan:
+  extends: .dev_aws_auth
+  stage: plan
+  script:
+    - cd $DEV_TF_ROOT
+    - terraform plan -out="dev.tfplan"
+  artifacts:
+    paths:
+      - $DEV_TF_ROOT/dev.tfplan
+      - $DEV_TF_ROOT/ansible.zip
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+
+# -------------------------
+# DEV APPLY
+# -------------------------
+
+dev_apply:
+  extends: .dev_aws_auth
+  stage: apply
+  script:
+    - cd $DEV_TF_ROOT
+    - terraform apply -auto-approve dev.tfplan
+  dependencies:
+    - dev_plan
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+
+# -------------------------
+# DEV DESTROY
+# -------------------------
+
+dev_destroy:
+  extends: .dev_aws_auth
+  stage: destroy
+  script:
+    - cd $DEV_TF_ROOT
+    - terraform destroy -auto-approve
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+
+# -------------------------
+# Prd Initialise terraform
+# -------------------------
+
+#prd_init:
+#  extends: .prd_aws_auth
+#  stage: init
+#  script:
+#    - cd $PRD_TF_ROOT
+#    - terraform init
+#  cache:
+#    key: ${CI_COMMIT_REF_SLUG}
+#    paths:
+#      - ${PRD_TF_ROOT}/.terraform
+#      - ${PRD_TF_ROOT}/.terraform.lock.hcl
+
+# -------------------------
+# Prd Validate
+# -------------------------
+
+#prd_validate:
+#  extends: .prd_aws_auth
+#  stage: validate
+#  dependencies:
+#    - prd_init
+#  script:
+#    - cd $PRD_TF_ROOT
+#    - terraform fmt -check -recursive
+#    - terraform validate
+
+## -------------------------
+## PROD PLAN
+## -------------------------
+
+#prd_plan:
+#  extends: .prd_aws_auth
+#  stage: plan
+#  script:
+#    - cd $PRD_TF_ROOT
+#    - terraform plan -out="prd.tfplan"
+#  artifacts:
+#    paths:
+#      - $PRD_TF_ROOT/dev.tfplan
+#      - $PRD_TF_ROOT/ansible.zip
+#  rules:
+#    - if: '$CI_COMMIT_BRANCH'
+
+## -------------------------
+## PROD APPLY
+## -------------------------
+
+#prd_apply:
+#  extends: .prd_aws_auth
+#  stage: apply
+#  script:
+#    - cd $PRD_TF_ROOT
+#    - terraform apply -auto-approve prd.tfplan
+#  dependencies:
+#    - prd_plan
+#  when: manual
+#  rules:
+#    - if: '$CI_COMMIT_BRANCH'
+
+# -------------------------
+# PRD DESTROY
+# -------------------------
+
+#prd_destroy:
+#  extends: .prd_aws_auth
+#  stage: destroy
+#  script:
+#    - cd $PRD_TF_ROOT
+#    - terraform destroy -auto-approve
+#  when: manual
+#  rules:
+#    - if: '$CI_COMMIT_BRANCH'

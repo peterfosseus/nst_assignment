@@ -1,0 +1,23 @@
+
+# Documentation on template : https://to-be-continuous.gitlab.io/doc/ref/terraform/
+
+include:
+  # 1: include the component
+  - component: $CI_SERVER_FQDN/to-be-continuous/terraform/gitlab-ci-terraform@9.4.0
+    # 2: set/override component inputs
+    inputs:
+      # ⚠ this is only an example
+      image: docker.io/hashicorp/terraform:latest
+      review-enabled: true
+      staging-enabled: true
+      prod-enabled: false
+      project-dir: dev
+  # AWS variant
+  - component: $CI_SERVER_FQDN/to-be-continuous/terraform/gitlab-ci-terraform-aws@9.4.0
+    inputs:
+      # audience claim for JWT
+      aws-oidc-aud: "https://gitlab.com"
+      # common OIDC role ARN for non-prod envs
+      aws-oidc-role-arn: "${DEV_AWS_ROLE_ARN}"
+      # specific OIDC role ARN for prod
+      aws-prod-oidc-role-arn: "${PRD_AWS_ROLE_ARN}"
