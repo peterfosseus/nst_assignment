@@ -28,8 +28,16 @@ resource "aws_codedeploy_deployment_group" "codedeploy_deployment-group" {
 
   alarm_configuration {
     enabled = local.codedeploy.alarm_configuration.enabled
-    alarms  = [local.codedeploy.alarm_configuration.alarms]
+    alarms = [
+      aws_cloudwatch_metric_alarm.healthy_hosts.alarm_name,
+      aws_cloudwatch_metric_alarm.asg_high_cpu.alarm_name
+    ]
   }
 
   outdated_instances_strategy = local.codedeploy.outdated_instances_strategy
+
+  depends_on = [
+    aws_cloudwatch_metric_alarm.healthy_hosts,
+    aws_cloudwatch_metric_alarm.asg_high_cpu
+  ]
 }

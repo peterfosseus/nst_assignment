@@ -59,7 +59,8 @@ default:
 # -------------------------
 
 dev_init:
-  extends: .dev_aws_auth
+  extends:
+    - .dev_aws_auth
   stage: init
   script:
     - cd $DEV_TF_ROOT
@@ -75,13 +76,13 @@ dev_init:
       - ${DEV_TF_ROOT}/.terraform
       - ${DEV_TF_ROOT}/.terraform.lock.hcl
 
-
 # -------------------------
 # Dev Validate
 # -------------------------
 
 dev_validate:
-  extends: .dev_aws_auth
+  extends:
+    - .dev_aws_auth
   stage: validate
   dependencies:
     - dev_init
@@ -95,7 +96,8 @@ dev_validate:
 # -------------------------
 
 dev_plan:
-  extends: .dev_aws_auth
+  extends:
+    - .dev_aws_auth
   stage: plan
   script:
     - cd $DEV_TF_ROOT

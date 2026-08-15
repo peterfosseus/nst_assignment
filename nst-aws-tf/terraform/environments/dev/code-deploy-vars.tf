@@ -24,7 +24,6 @@ locals {
       events  = "DEPLOYMENT_FAILURE"
     }
     alarm_configuration = {
-      alarms  = "deploy-alarm"
       enabled = true
     }
     s3 = {

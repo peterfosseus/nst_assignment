@@ -12,6 +12,13 @@
 
   tasks:
 
+    - name: Install system python packages
+      ansible.builtin.dnf:
+        name:
+          - python3
+          - python3-pip
+        state: present
+
     - name: Create application user
       ansible.builtin.user:
         name: "{{ app_user }}"
@@ -58,6 +65,7 @@
       ansible.builtin.systemd:
         name: "{{ app_name }}"
         enabled: true
+        state: started
         daemon_reload: true
 
   handlers:
