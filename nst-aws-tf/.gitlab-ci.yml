@@ -247,9 +247,10 @@ prd_destroy:
   extends: .prd_aws_auth
   stage: destroy
   needs:
+    - prd_plan
     - prd_apply
   dependencies:
-    - prd_apply
+    - prd_plan
   script:
     - cd $PRD_TF_ROOT
     - terraform init
