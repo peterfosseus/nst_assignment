@@ -1,7 +1,7 @@
 
 #tfsec:ignore:AWS-0089 (LOW): Bucket has logging disabled
 module "s3_terraform_state_bucket" {
-  source = "terraform-aws-modules/s3-bucket/aws"
+  source  = "terraform-aws-modules/s3-bucket/aws"
   version = "5.15.4"
 
   bucket = local.terraform-state.name
@@ -25,15 +25,11 @@ module "s3_terraform_state_bucket" {
 
   lifecycle_rule = [
     {
-      id      = "Expire in 365 Days"
+      id      = "Terraform state retention"
       enabled = true
 
-      expiration = {
-        days = 365
-      }
-
       noncurrent_version_expiration = {
-        days = 365
+        days = 90
       }
     }
   ]

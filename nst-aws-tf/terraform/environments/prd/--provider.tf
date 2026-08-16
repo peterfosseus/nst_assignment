@@ -9,6 +9,22 @@
 
 provider "aws" {
   region = "eu-west-1"
+
+  default_tags {
+    tags = {
+      customer    = var.company_name
+      owner       = var.owner
+      environment = var.env_name
+      service     = var.service
+      cost_center = var.cost_center
+    }
+  }
+}
+
+# Used for Certificates that require this region.
+provider "aws" {
+  alias  = "virginia"
+  region = "us-east-1"
 }
 
 terraform {
@@ -19,9 +35,18 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.58.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "2.7.1"
+    }
   }
 
-  # using GitLab http backend
-  backend "http" {
+  # using S3 backend
+  backend "s3" {
+    bucket       = "nst-rewards-prd-terraform-state"
+    key          = "terraform.tfstate"
+    region       = "eu-west-1"
+    encrypt      = true
+    use_lockfile = true
   }
 }

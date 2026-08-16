@@ -1,1 +1,3 @@
 /.idea/
+/terraform/environments/dev/.terraform/
+/terraform/environments/dev/.terraform.lock.hcl

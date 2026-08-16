@@ -1,15 +1,16 @@
 [Unit]
-Description=Rewards health API
-After=network-online.target
+Description=myapp Python Application
+After=network.target
 Wants=network-online.target
 
 [Service]
-User=rewards
-Group=rewards
-EnvironmentFile=/etc/rewards-api/environment
-ExecStart=/usr/bin/python3 /opt/rewards-api/app.py
+Type=simple
+User=myapp
+Group=myapp
+WorkingDirectory=/opt/myapp
+ExecStart=/usr/bin/python3 /opt/myapp/app.py
 Restart=always
-RestartSec=2
+RestartSec=5
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

@@ -44,7 +44,7 @@ terraform {
   # using S3 backend
   backend "s3" {
     bucket       = "nst-rewards-dev-terraform-state"
-    key          = "nst/rewards/dev/terraform.tfstate"
+    key          = "terraform.tfstate"
     region       = "eu-west-1"
     encrypt      = true
     use_lockfile = true

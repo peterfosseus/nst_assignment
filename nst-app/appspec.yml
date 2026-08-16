@@ -9,7 +9,7 @@ files:
 hooks:
   ApplicationStop:
     - location: scripts/stop.sh
-      timeout: 30
+      timeout: 300
       runas: root
 
   AfterInstall:
@@ -19,5 +19,5 @@ hooks:
 
   ApplicationStart:
     - location: scripts/start.sh
-      timeout: 30
+      timeout: 300
       runas: root

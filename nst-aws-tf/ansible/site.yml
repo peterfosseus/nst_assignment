@@ -45,6 +45,7 @@
           [Unit]
           Description={{ app_name }} Python Application
           After=network.target
+          Wants=network-online.target
 
           [Service]
           Type=simple
@@ -54,6 +55,10 @@
           ExecStart={{ python_bin }} {{ app_dir }}/app.py
           Restart=always
           RestartSec=5
+          NoNewPrivileges=true
+          PrivateTmp=true
+          ProtectSystem=strict
+          ProtectHome=true
 
           [Install]
           WantedBy=multi-user.target
@@ -78,3 +83,4 @@
       ansible.builtin.systemd:
         name: "{{ app_name }}"
         state: restarted
+

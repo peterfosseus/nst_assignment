@@ -1,41 +1,92 @@
 stages:
   - deploy
 
-deploy:
-  stage: deploy
-
+default:
   image:
     name: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
+    entrypoint: [""]
 
+# -------------------------
+# AWS OIDC authentication
+# -------------------------
+
+.dev_aws_auth:
   id_tokens:
-    MY_OIDC_TOKEN:
+    GITLAB_OIDC_TOKEN:
       aud: https://gitlab.com
 
   before_script:
-    - set -x
     - mkdir -p ~/.aws
-    - echo "${MY_OIDC_TOKEN}" > /tmp/web_identity_token
-    - echo -e "[profile oidc]\nrole_arn=${ROLE_ARN}\nweb_identity_token_file=/tmp/web_identity_token" > ~/.aws/config
+    - echo "${GITLAB_OIDC_TOKEN}" > /tmp/web_identity_token
+    - echo -e "[default]\nrole_arn=${DEV_AWS_ROLE_ARN}\nweb_identity_token_file=/tmp/web_identity_token" > ~/.aws/config
     - cat ~/.aws/config
+    - aws sts get-caller-identity
 
+.prd_aws_auth:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+
+  before_script:
+    - mkdir -p ~/.aws
+    - echo "${GITLAB_OIDC_TOKEN}" > /tmp/web_identity_token
+    - echo -e "[default]\nrole_arn=${PRD_AWS_ROLE_ARN}\nweb_identity_token_file=/tmp/web_identity_token" > ~/.aws/config
+    - cat ~/.aws/config
+    - aws sts get-caller-identity
+
+# -----------
+# Dev deploy
+# -----------
+
+dev_deploy:
+  extends:
+    - .dev_aws_auth
+  stage: deploy
   script:
     # 0. Create the zip
     - zip -r application.zip . -x ".git/*"
 
     # 1. Upload the artifact to S3
     - aws deploy push
-      --profile oidc
-      --application-name "$CODEDEPLOY_APPLICATION"
-      --s3-location s3://"$DEPLOY_BUCKET/releases/$CI_COMMIT_SHA.zip"
+      --application-name "$DEV_CODEDEPLOY_APPLICATION"
+      --s3-location s3://"$DEV_DEPLOY_BUCKET/releases/app.zip"
 
     # 2. Trigger the CodeDeploy deployment
-    - aws deploy create-deployment 
-      --profile oidc
-      --application-name "$CODEDEPLOY_APPLICATION"
-      --deployment-group-name "$CODEDEPLOY_DEPLOYMENT_GROUP"
+    - aws deploy create-deployment
+      --application-name "$DEV_CODEDEPLOY_APPLICATION"
+      --deployment-group-name "$DEV_CODEDEPLOY_DEPLOYMENT_GROUP"
       --deployment-config-name CodeDeployDefault.OneAtATime
-      --s3-location bucket="$DEPLOY_BUCKET",key="releases/$CI_COMMIT_SHA.zip",bundleType=zip 
+      --s3-location bucket="$DEV_DEPLOY_BUCKET",key="releases/app.zip",bundleType=zip
       --description "GitLab deployment $CI_COMMIT_SHA"
 
-  only:
-    - main
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+
+# -----------
+# Prd deploy
+# -----------
+
+prd_deploy:
+  extends:
+    - .prd_aws_auth
+  stage: deploy
+  script:
+    # 0. Create the zip
+    - zip -r application.zip . -x ".git/*"
+
+    # 1. Upload the artifact to S3
+    - aws deploy push
+      --application-name "$PRD_CODEDEPLOY_APPLICATION"
+      --s3-location s3://"$PRD_DEPLOY_BUCKET/releases/app.zip"
+
+    # 2. Trigger the CodeDeploy deployment
+    - aws deploy create-deployment
+      --application-name "$PRD_CODEDEPLOY_APPLICATION"
+      --deployment-group-name "$PRD_CODEDEPLOY_DEPLOYMENT_GROUP"
+      --deployment-config-name CodeDeployDefault.OneAtATime
+      --s3-location bucket="$PRD_DEPLOY_BUCKET",key="releases/app.zip",bundleType=zip
+      --description "GitLab deployment $CI_COMMIT_SHA"
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual

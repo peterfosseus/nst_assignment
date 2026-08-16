@@ -34,7 +34,7 @@ response = client.get_secret_value(
     SecretId="nst-rewards-dev"
 )
 
-# I need to not use the words secret manager as it sets of alarms
+# I need to not use the words secret manager as it sets of alarms.
 sm_array = json.loads(response["SecretString"])
 
 class Handler(BaseHTTPRequestHandler):
